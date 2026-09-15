@@ -595,6 +595,12 @@ function allStores(){
   });
   return Object.keys(set).sort(function(a,b){return a.localeCompare(b,'zh')});
 }
+/* 某家店归谁管（可能挂在多个经理名下） */
+function mgrOf(key){
+  var names=[];
+  MANAGERS.forEach(function(m){ if(m.stores.indexOf(key)>=0) names.push(m.name) });
+  return names.join(' / ');
+}
 /* 当前筛选的门店范围，null = 全部 */
 function scopeSet(){
   var m=mgrById($('#mgrFilter').value);
@@ -929,16 +935,20 @@ function delta(v){
   return v>0 ? '<td class="up">+'+v+'</td>' : '<td class="zero">0</td>';
 }
 function renderSum(L,T){
+  var hasMgr=MANAGERS.length>0;
   var body=L.slice().sort(function(a,b){return b.good-a.good}).map(function(s){
     return '<tr><td>'+s.key+'</td>'+
+      (hasMgr?('<td>'+(esc(mgrOf(s.key))||'<span class="zero">—</span>')+'</td>'):'')+
       cell(s.mt[0])+cell(s.mt[1])+cell(s.mt[2],'bad')+cell(s.mtAll)+
       cell(s.dy[0])+cell(s.dy[1])+cell(s.dy[2],'bad')+cell(s.dyAll)+
       cell(s.good)+cell(s.bad,'bad')+'<td>'+s.rate.toFixed(1)+'%</td></tr>';
   }).join('');
-  var tr='<tr class="total"><td>合计</td><td>'+num(T.mt0)+'</td><td>'+T.mt1+'</td><td>'+T.mt2+'</td><td>'+num(T.mtAll)+'</td>'+
+  var tr='<tr class="total"><td>合计</td>'+(hasMgr?'<td></td>':'')+'<td>'+num(T.mt0)+'</td><td>'+T.mt1+'</td><td>'+T.mt2+'</td><td>'+num(T.mtAll)+'</td>'+
     '<td>'+num(T.dy0)+'</td><td>'+T.dy1+'</td><td>'+T.dy2+'</td><td>'+num(T.dyAll)+'</td>'+
     '<td>'+num(T.good)+'</td><td>'+T.bad+'</td><td>'+(T.all?(T.good/T.all*100).toFixed(2):0)+'%</td></tr>';
-  $('#tableHost').innerHTML=table(['门店','美团好评','美团中评','美团差评','美团合计','抖音好评','抖音中评','抖音差评','抖音合计','好评合计','差评合计','好评率'],body,tr);
+  var head=['门店'].concat(hasMgr?['区域经理']:[],
+    ['美团好评','美团中评','美团差评','美团合计','抖音好评','抖音中评','抖音差评','抖音合计','好评合计','差评合计','好评率']);
+  $('#tableHost').innerHTML=table(head,body,tr);
 }
 function renderCmp(L,T,D){
   if(!D.length){ $('#tableHost').innerHTML='<div class="msel-empty">还没有选日期</div>'; return }
@@ -1023,14 +1033,15 @@ function styleSheet(ws,hasTotal){
 function cmpSheet(wb,title,pf){
   var R=RESULT, T=R.T, L=R.view||R.list, D=R.dates;
   var ws=wb.addWorksheet(title);
-  var head=['门店'];
+  var hasMgr=MANAGERS.length>0;
+  var head=['门店'].concat(hasMgr?['区域经理']:[]);
   D.forEach(function(d,i){ head.push(d); if(i>0) head.push('较上期') });
   head.push('区间新增');
   ws.addRow(head);
   var span=function(s){ return cumOf(s,D[D.length-1],pf)-cumOf(s,D[0],pf) };
   L.slice().sort(function(a,b){ return (span(b)-span(a))||(cumOf(b,D[D.length-1],pf)-cumOf(a,D[D.length-1],pf)) })
    .forEach(function(s){
-    var row=[s.key];
+    var row=[s.key].concat(hasMgr?[mgrOf(s.key)]:[]);
     D.forEach(function(d,i){
       row.push(cumOf(s,d,pf));
       if(i>0) row.push(cumOf(s,d,pf)-cumOf(s,D[i-1],pf));
@@ -1039,7 +1050,7 @@ function cmpSheet(wb,title,pf){
     ws.addRow(row);
   });
   var totalOf=function(d){ var c=T.cum[d]; return pf==='mt'?c.mt:(pf==='dy'?c.dy:c.mt+c.dy) };
-  var tr=['合计'];
+  var tr=['合计'].concat(hasMgr?['']:[]);
   D.forEach(function(d,i){ tr.push(totalOf(d)); if(i>0) tr.push(totalOf(d)-totalOf(D[i-1])) });
   tr.push(totalOf(D[D.length-1])-totalOf(D[0]));
   ws.addRow(tr);
@@ -1049,14 +1060,18 @@ $('#exportBtn').onclick=async function(){
   if(!RESULT) return;
   var R=RESULT, T=R.T, L=R.view||R.list, D=R.dates;
   var wb=new ExcelJS.Workbook();
-  wb.creator='好评差评统计';
+  wb.creator='好评统计';
 
+  var hasMgr=MANAGERS.length>0;
   var s1=wb.addWorksheet('门店好评差评统计');
-  s1.addRow(['门店','美团好评','美团中评','美团差评','美团合计','抖音好评','抖音中评','抖音差评','抖音合计','好评合计','差评合计','好评率']);
+  s1.addRow(['门店'].concat(hasMgr?['区域经理']:[],
+    ['美团好评','美团中评','美团差评','美团合计','抖音好评','抖音中评','抖音差评','抖音合计','好评合计','差评合计','好评率']));
   L.slice().sort(function(a,b){return b.good-a.good}).forEach(function(s){
-    s1.addRow([s.key,s.mt[0],s.mt[1],s.mt[2],s.mtAll,s.dy[0],s.dy[1],s.dy[2],s.dyAll,s.good,s.bad,s.rate.toFixed(1)+'%']);
+    s1.addRow([s.key].concat(hasMgr?[mgrOf(s.key)]:[],
+      [s.mt[0],s.mt[1],s.mt[2],s.mtAll,s.dy[0],s.dy[1],s.dy[2],s.dyAll,s.good,s.bad,s.rate.toFixed(1)+'%']));
   });
-  s1.addRow(['合计',T.mt0,T.mt1,T.mt2,T.mtAll,T.dy0,T.dy1,T.dy2,T.dyAll,T.good,T.bad,(T.all?(T.good/T.all*100).toFixed(2):0)+'%']);
+  s1.addRow(['合计'].concat(hasMgr?['']:[],
+    [T.mt0,T.mt1,T.mt2,T.mtAll,T.dy0,T.dy1,T.dy2,T.dyAll,T.good,T.bad,(T.all?(T.good/T.all*100).toFixed(2):0)+'%']));
   styleSheet(s1,true);
 
   if(D.length){
@@ -1072,6 +1087,42 @@ $('#exportBtn').onclick=async function(){
     styleSheet(s3,true);
   }
 
+  if(MANAGERS.length){
+    var sm=wb.addWorksheet('区域经理汇总');
+    var mh=['区域经理','门店数','美团好评','抖音好评','好评合计','差评合计','好评率'];
+    D.forEach(function(d,i){ mh.push(d); if(i>0) mh.push('较上期') });
+    if(D.length>1) mh.push('区间新增');
+    sm.addRow(mh);
+    /* 这一页按全部门店算，便于几位经理横向比较，不受上面的经理筛选影响 */
+    var rows=[];
+    MANAGERS.forEach(function(m){
+      var mine=R.list.filter(function(s){ return m.stores.indexOf(s.key)>=0 });
+      var g=0,b=0,mt=0,dy=0,all=0;
+      mine.forEach(function(s){ g+=s.good;b+=s.bad;mt+=s.mt[0];dy+=s.dy[0];all+=s.all });
+      var row=[m.name,mine.length,mt,dy,g,b,(all?(g/all*100).toFixed(1):0)+'%'];
+      var cum=D.map(function(d){
+        var v=0; mine.forEach(function(s){ v+=cumOf(s,d,'all') }); return v;
+      });
+      D.forEach(function(d,i){ row.push(cum[i]); if(i>0) row.push(cum[i]-cum[i-1]) });
+      if(D.length>1) row.push(cum[cum.length-1]-cum[0]);
+      rows.push({row:row, good:g});
+    });
+    /* 没有归属任何经理的门店单列一行 */
+    var rest=R.list.filter(function(s){ return !mgrOf(s.key) });
+    if(rest.length){
+      var g=0,b=0,mt=0,dy=0,all=0;
+      rest.forEach(function(s){ g+=s.good;b+=s.bad;mt+=s.mt[0];dy+=s.dy[0];all+=s.all });
+      var row=['（未分配）',rest.length,mt,dy,g,b,(all?(g/all*100).toFixed(1):0)+'%'];
+      var cum=D.map(function(d){ var v=0; rest.forEach(function(s){ v+=cumOf(s,d,'all') }); return v });
+      D.forEach(function(d,i){ row.push(cum[i]); if(i>0) row.push(cum[i]-cum[i-1]) });
+      if(D.length>1) row.push(cum[cum.length-1]-cum[0]);
+      rows.push({row:row, good:-1});
+    }
+    rows.sort(function(a,b){ return b.good-a.good });
+    rows.forEach(function(x){ sm.addRow(x.row) });
+    styleSheet(sm,false);
+  }
+
   var s4=wb.addWorksheet('门店名称对照');
   s4.addRow(['门店简称','两平台出现过的全称']);
   L.slice().sort(function(a,b){return a.key.localeCompare(b.key,'zh')}).forEach(function(s){ s4.addRow([s.key,s.names]) });
@@ -1080,7 +1131,9 @@ $('#exportBtn').onclick=async function(){
   var buf=await wb.xlsx.writeBuffer();
   var blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   var a=document.createElement('a');
-  a.href=URL.createObjectURL(blob); a.download='好评差评统计结果.xlsx';
+  var mgrNow=mgrById($('#mgrFilter').value);
+  a.href=URL.createObjectURL(blob);
+  a.download='好评统计'+(mgrNow?('_'+mgrNow.name):'')+'.xlsx';
   document.body.appendChild(a); a.click();
   setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1000);
   toast('已导出 Excel','success');
