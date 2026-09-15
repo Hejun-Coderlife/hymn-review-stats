@@ -87,6 +87,7 @@
   }
   .drop:hover,.drop.over{border-color:var(--orange);background:rgba(232,89,12,.04);transform:translateY(-1px)}
   .drop .big{font-size:14.5px;font-weight:600;letter-spacing:.04em}
+  .drop .small{margin-top:6px;font-size:11.5px;color:var(--muted);letter-spacing:.02em}
   .lane .path{margin-top:10px;font-size:12px;color:var(--muted);line-height:1.7}
   input[type=file]{display:none}
   .files{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
@@ -234,6 +235,7 @@
         <span class="tag">美团 / 大众点评</span>
         <div class="drop" data-pf="meituan">
           <div class="big">美团评价表</div>
+          <div class="small">可一次选多份</div>
         </div>
         <div class="path">导出路径：评价管理 → 门店评价 → 平台选美团 → 选日期 → 下载评论</div>
         <div class="files" id="filesMeituan"></div>
@@ -242,6 +244,7 @@
         <span class="tag">抖音来客</span>
         <div class="drop" data-pf="douyin">
           <div class="big">抖音评价表</div>
+          <div class="small">可一次选多份</div>
         </div>
         <div class="path">导出路径：抖音来客 → 经营成长 → 评价管理 → 全部评价 → 导出（右上角）→ 导出评价</div>
         <div class="files" id="filesDouyin"></div>
@@ -434,10 +437,11 @@ function renderFiles(){
 }
 async function addFiles(list,lane){
   $('#err').textContent='';
+  var files=Array.prototype.slice.call(list||[]);   /* 一次可以选多份 */
   var errs=[], ok=0;
-  for(var i=0;i<list.length;i++){
-    try{ var r=await readFile(list[i],lane); r.savedAt=Date.now(); FILES[r.name]=r; ok++; }
-    catch(e){ errs.push(list[i].name+'：'+e.message) }
+  for(var i=0;i<files.length;i++){
+    try{ var r=await readFile(files[i],lane); r.savedAt=Date.now(); FILES[r.name]=r; ok++; }
+    catch(e){ errs.push(files[i].name+'：'+e.message) }
   }
   saveFiles(); renderFiles(); refreshDateOptions();
   if(errs.length){ $('#err').innerHTML=errs.map(esc).join('<br>'); toast('有 '+errs.length+' 个文件没读进来','error'); }
@@ -500,7 +504,13 @@ function clearSaved(){
 
 /* ═══════════ 两条通道的拖拽 / 选择 ═══════════ */
 var fileInput=$('#fileInput'), pendingLane='meituan';
-fileInput.onchange=function(e){ addFiles(e.target.files,pendingLane); fileInput.value='' };
+fileInput.onchange=function(e){
+  /* 必须先把 FileList 拷成数组：value='' 会把 input 里的文件清掉，
+     addFiles 是异步的，直接传引用只会读到第一个文件 */
+  var picked=Array.prototype.slice.call(e.target.files||[]);
+  fileInput.value='';
+  if(picked.length) addFiles(picked,pendingLane);
+};
 document.querySelectorAll('.drop').forEach(function(zone){
   var lane=zone.dataset.pf;
   zone.onclick=function(){ pendingLane=lane; fileInput.click() };
@@ -511,7 +521,8 @@ document.querySelectorAll('.drop').forEach(function(zone){
     zone.addEventListener(ev,function(e){e.preventDefault();zone.classList.remove('over')});
   });
   zone.addEventListener('drop',function(e){
-    if(e.dataTransfer&&e.dataTransfer.files) addFiles(e.dataTransfer.files,lane);
+    var dropped=(e.dataTransfer&&e.dataTransfer.files)?Array.prototype.slice.call(e.dataTransfer.files):[];
+    if(dropped.length) addFiles(dropped,lane);
   });
 });
 
