@@ -142,6 +142,44 @@
   .msel-empty{padding:14px 10px;font-size:12.5px;color:var(--muted);text-align:center}
   .hint{margin-top:9px;font-size:12px;color:var(--muted);line-height:1.7}
 
+  /* ── 区域经理 ── */
+  .row{display:flex;gap:8px;align-items:stretch}
+  .row select{flex:1;min-width:0}
+  .btn.mini{min-height:46px;padding:0 16px;font-size:13px;letter-spacing:.06em;border-radius:13px;white-space:nowrap}
+  .mask{position:fixed;inset:0;z-index:200;background:rgba(34,29,23,.28);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+    display:flex;align-items:center;justify-content:center;padding:24px}
+  .modal{
+    width:min(720px,100%);max-height:86vh;overflow:auto;background:#fff;border:1px solid var(--line);border-radius:22px;
+    padding:28px 28px 24px;box-shadow:0 40px 90px -20px rgba(34,29,23,.35);
+    animation:cardIn .5s cubic-bezier(.22,.85,.3,1) both;
+  }
+  .modal h3{margin:0 0 4px;font-size:19px;font-family:'Playfair Display','Noto Serif SC','Songti SC',serif;font-weight:700}
+  .modal .lead{margin:0 0 18px}
+  .mgr-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px}
+  .mgr-chip{border:1px solid var(--line);border-radius:999px;padding:7px 14px;background:#fff;font-size:13px;
+    cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:7px}
+  .mgr-chip:hover{border-color:rgba(232,89,12,.45)}
+  .mgr-chip.on{background:rgba(232,89,12,.08);border-color:rgba(232,89,12,.35);color:var(--orange-deep);font-weight:700}
+  .mgr-chip .cnt{font-size:11.5px;color:var(--muted);font-weight:400}
+  .mgr-chip.add{border-style:dashed;color:var(--muted)}
+  .mgr-name{margin-bottom:14px}
+  .mgr-name input[type=text]{width:100%;min-height:46px;border-radius:13px;border:1px solid var(--line);
+    padding:10px 14px;font-size:14.5px;font-family:inherit;color:var(--ink);outline:none;background:#fff;transition:border-color .22s,box-shadow .22s}
+  .mgr-name input[type=text]:focus{border-color:var(--orange);box-shadow:0 0 0 4px rgba(232,89,12,.10)}
+  .store-tools{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+  .store-tools input[type=text]{flex:1;min-width:140px;min-height:38px;border-radius:11px;border:1px solid var(--line);
+    padding:8px 12px;font-size:13.5px;font-family:inherit;outline:none}
+  .store-tools input[type=text]:focus{border-color:var(--orange);box-shadow:0 0 0 3px rgba(232,89,12,.10)}
+  .store-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:2px;
+    max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:13px;padding:8px;background:#FDFBF7}
+  .store-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;font-size:13px;cursor:pointer;color:var(--ink-soft)}
+  .store-item:hover{background:#fff}
+  .store-item.on{color:var(--orange-deep);font-weight:700}
+  .store-item .tick{width:14px;height:14px;border-radius:4px;border:1.5px solid rgba(34,29,23,.18);flex:none}
+  .store-item.on .tick{background:var(--orange);border-color:var(--orange)}
+  .modal-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap;align-items:center}
+  .modal-actions .spacer{flex:1}
+
   /* ── 按钮 ── */
   .btn{
     min-height:50px;padding:0 34px;border:none;border-radius:14px;position:relative;overflow:hidden;
@@ -281,6 +319,13 @@
         </div>
       </div>
       <div>
+        <label class="fl" for="mgrFilter">区域经理</label>
+        <div class="row">
+          <select id="mgrFilter"><option value="">全部门店</option></select>
+          <button class="btn ghost mini" id="mgrEditBtn" type="button">管理</button>
+        </div>
+      </div>
+      <div>
         <label class="fl" for="dedup">完全重复的记录</label>
         <select id="dedup">
           <option value="0" selected>保留（后台原始口径）</option>
@@ -318,6 +363,29 @@
 
   <div class="footnote">Crafted for Excellence</div>
 </main>
+
+<!-- 区域经理分组 -->
+<div class="mask hidden" id="mgrMask">
+  <div class="modal">
+    <h3>区域经理分组</h3>
+    <p class="lead">先选一位经理，再勾选他负责的门店；保存后可在「区域经理」下拉里按人筛选。</p>
+    <div class="mgr-chips" id="mgrChips"></div>
+    <div class="mgr-name"><input type="text" id="mgrName" placeholder="经理姓名，例如：王经理" /></div>
+    <div class="store-tools">
+      <input type="text" id="storeSearch" placeholder="搜门店…" />
+      <button class="btn ghost mini" id="storeAll" type="button">全选</button>
+      <button class="btn ghost mini" id="storeNone" type="button">清空</button>
+      <span id="storeCount" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <div class="store-grid" id="storeGrid"></div>
+    <div class="modal-actions">
+      <button class="btn" id="mgrSave" type="button">保 存</button>
+      <button class="btn ghost mini" id="mgrDel" type="button">删除该经理</button>
+      <span class="spacer"></span>
+      <button class="btn ghost mini" id="mgrClose" type="button">关闭</button>
+    </div>
+  </div>
+</div>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script src="vendor/xlsx.full.min.js"></script>
@@ -473,7 +541,7 @@ function saveFiles(){
 function saveOpts(){
   try{
     localStorage.setItem(LS_OPTS, JSON.stringify({
-      th:$('#threshold').value, dedup:$('#dedup').value, dates:DATES
+      th:$('#threshold').value, dedup:$('#dedup').value, dates:DATES, mgr:$('#mgrFilter').value
     }));
   }catch(e){}
 }
@@ -485,6 +553,8 @@ function loadSaved(){
     if(opts.dedup) $('#dedup').value=opts.dedup;
     if(opts.dates && opts.dates.length) DATES=opts.dates.slice().sort();
   }
+  loadMgrs(); renderMgrFilter();
+  if(opts && opts.mgr && mgrById(opts.mgr)) $('#mgrFilter').value=opts.mgr;
   var arr=null;
   try{ arr=JSON.parse(localStorage.getItem(LS_FILES)||'null') }catch(e){}
   if(arr && arr.length){
@@ -501,6 +571,143 @@ function clearSaved(){
   $('#err').textContent='';
   toast('已清空已保存的表格');
 }
+
+/* ═══════════ 区域经理分组 ═══════════ */
+var LS_MGRS='reviewStats.mgrs';
+var MANAGERS=[];        // [{id, name, stores:[门店简称]}]
+var EDIT_ID=null;       // 弹窗里正在编辑的经理
+
+function loadMgrs(){
+  try{ MANAGERS=JSON.parse(localStorage.getItem(LS_MGRS)||'[]')||[] }catch(e){ MANAGERS=[] }
+}
+function saveMgrs(){
+  try{ localStorage.setItem(LS_MGRS, JSON.stringify(MANAGERS)) }catch(e){ toast('经理分组没能保存到本地','error') }
+}
+function mgrById(id){
+  for(var i=0;i<MANAGERS.length;i++) if(MANAGERS[i].id===id) return MANAGERS[i];
+  return null;
+}
+/* 已上传数据里出现过的全部门店简称 */
+function allStores(){
+  var set={};
+  Object.keys(FILES).forEach(function(n){
+    FILES[n].rows.forEach(function(r){ set[r.key]=1 });
+  });
+  return Object.keys(set).sort(function(a,b){return a.localeCompare(b,'zh')});
+}
+/* 当前筛选的门店范围，null = 全部 */
+function scopeSet(){
+  var m=mgrById($('#mgrFilter').value);
+  if(!m) return null;
+  var set={}; m.stores.forEach(function(k){ set[k]=1 });
+  return set;
+}
+function renderMgrFilter(){
+  var sel=$('#mgrFilter'), cur=sel.value;
+  sel.innerHTML='<option value="">全部门店</option>';
+  MANAGERS.forEach(function(m){
+    var o=document.createElement('option');
+    o.value=m.id; o.textContent=m.name+'（'+m.stores.length+' 店）';
+    sel.appendChild(o);
+  });
+  sel.value = mgrById(cur) ? cur : '';
+}
+
+/* ── 弹窗 ── */
+function openMgrModal(){
+  if(!Object.keys(FILES).length){ toast('先上传评价表，才能选门店','error'); return }
+  EDIT_ID = MANAGERS.length ? MANAGERS[0].id : null;
+  if(!EDIT_ID) newMgr();
+  renderModal();
+  $('#mgrMask').classList.remove('hidden');
+}
+function newMgr(){
+  var m={id:'m'+Date.now(), name:'', stores:[]};
+  MANAGERS.push(m); EDIT_ID=m.id;
+}
+function renderModal(){
+  var m=mgrById(EDIT_ID);
+  var chips=$('#mgrChips'); chips.innerHTML='';
+  MANAGERS.forEach(function(x){
+    var d=document.createElement('div');
+    d.className='mgr-chip'+(x.id===EDIT_ID?' on':'');
+    d.innerHTML='<span class="nm"></span><span class="cnt">'+x.stores.length+'</span>';
+    d.querySelector('.nm').textContent=x.name||'未命名';
+    d.onclick=function(){ commitName(); EDIT_ID=x.id; renderModal() };
+    chips.appendChild(d);
+  });
+  var add=document.createElement('div');
+  add.className='mgr-chip add'; add.textContent='＋ 新建经理';
+  add.onclick=function(){ commitName(); newMgr(); renderModal() };
+  chips.appendChild(add);
+
+  $('#mgrName').value = m?m.name:'';
+  renderStoreGrid();
+}
+function commitName(){
+  var m=mgrById(EDIT_ID); if(m) m.name=$('#mgrName').value.trim();
+}
+function renderStoreGrid(){
+  var m=mgrById(EDIT_ID), host=$('#storeGrid');
+  var kw=$('#storeSearch').value.trim();
+  var list=allStores().filter(function(k){ return !kw || k.indexOf(kw)>=0 });
+  host.innerHTML='';
+  if(!list.length){ host.innerHTML='<div class="msel-empty">没有匹配的门店</div>' }
+  list.forEach(function(k){
+    var on=m && m.stores.indexOf(k)>=0;
+    var d=document.createElement('div');
+    d.className='store-item'+(on?' on':'');
+    d.innerHTML='<span class="tick"></span><span class="nm"></span>';
+    d.querySelector('.nm').textContent=k;
+    d.onclick=function(){ toggleStore(k) };
+    host.appendChild(d);
+  });
+  $('#storeCount').textContent = m ? ('已选 '+m.stores.length+' / '+allStores().length+' 家') : '';
+}
+function toggleStore(k){
+  var m=mgrById(EDIT_ID); if(!m) return;
+  var i=m.stores.indexOf(k);
+  if(i>=0) m.stores.splice(i,1); else m.stores.push(k);
+  renderStoreGrid();
+}
+$('#mgrEditBtn').onclick=openMgrModal;
+$('#storeSearch').oninput=renderStoreGrid;
+$('#storeAll').onclick=function(){
+  var m=mgrById(EDIT_ID); if(!m) return;
+  var kw=$('#storeSearch').value.trim();
+  allStores().forEach(function(k){
+    if(kw && k.indexOf(kw)<0) return;
+    if(m.stores.indexOf(k)<0) m.stores.push(k);
+  });
+  renderStoreGrid();
+};
+$('#storeNone').onclick=function(){
+  var m=mgrById(EDIT_ID); if(!m) return;
+  m.stores=[]; renderStoreGrid();
+};
+$('#mgrDel').onclick=function(){
+  var m=mgrById(EDIT_ID); if(!m) return;
+  MANAGERS=MANAGERS.filter(function(x){ return x.id!==EDIT_ID });
+  saveMgrs(); renderMgrFilter();
+  EDIT_ID = MANAGERS.length ? MANAGERS[0].id : null;
+  if(!EDIT_ID) newMgr();
+  renderModal(); toast('已删除');
+};
+$('#mgrSave').onclick=function(){
+  commitName();
+  MANAGERS=MANAGERS.filter(function(m){ return m.name || m.stores.length });
+  MANAGERS.forEach(function(m,i){ if(!m.name) m.name='经理'+(i+1) });
+  saveMgrs(); renderMgrFilter();
+  $('#mgrMask').classList.add('hidden');
+  if(RESULT) render();
+  toast('已保存','success');
+};
+$('#mgrClose').onclick=function(){
+  loadMgrs(); renderMgrFilter();       /* 丢掉未保存的改动 */
+  $('#mgrMask').classList.add('hidden');
+};
+$('#mgrMask').onclick=function(e){ if(e.target===$('#mgrMask')) $('#mgrClose').onclick() };
+$('#mgrFilter').onchange=function(){ saveOpts(); if(RESULT) render() };
 
 /* ═══════════ 两条通道的拖拽 / 选择 ═══════════ */
 var fileInput=$('#fileInput'), pendingLane='meituan';
@@ -649,7 +856,10 @@ function cumOf(s,d,pf){
 /* ═══════════ 渲染 ═══════════ */
 var TAB='sum';
 function render(){
-  var R=RESULT, L=R.list, D=R.dates;
+  var R=RESULT, D=R.dates;
+  var scope=scopeSet();
+  var L = scope ? R.list.filter(function(s){ return scope[s.key] }) : R.list;
+  R.view=L;   /* 导出用同一份范围 */
   var T={good:0,mid:0,bad:0,mtAll:0,dyAll:0,all:0,mt0:0,mt1:0,mt2:0,dy0:0,dy1:0,dy2:0,cum:{}};
   D.forEach(function(d){ T.cum[d]={mt:0,dy:0} });
   L.forEach(function(s){
@@ -659,8 +869,16 @@ function render(){
   });
   R.T=T;
 
-  $('#resultLead').textContent='共 '+L.length+' 家门店、'+num(R.total)+' 条评价'+
-    (R.dupCount?('（其中 '+R.dupCount+' 条为完全重复记录）'):'');
+  var m=mgrById($('#mgrFilter').value);
+  var scopeTxt=m?('区域经理：'+m.name+' · '):'';
+  var cntTxt=scope?('共 '+L.length+' 家门店（全部 '+R.list.length+' 家）'):('共 '+L.length+' 家门店、'+num(R.total)+' 条评价');
+  $('#resultLead').textContent=scopeTxt+cntTxt+
+    (R.dupCount&&!scope?('（其中 '+R.dupCount+' 条为完全重复记录）'):'');
+  if(scope && !L.length){
+    $('#kpis').innerHTML=''; $('#tableHost').innerHTML='<div class="msel-empty">这位经理名下的门店，在已上传的数据里一条评价都没有</div>';
+    $('#coverage').innerHTML=''; $('#resultCard').classList.remove('hidden'); $('#exportBtn').classList.remove('hidden');
+    return;
+  }
 
   var first=D[0], last=D[D.length-1];
   var fv=first?(T.cum[first].mt+T.cum[first].dy):0;
@@ -803,7 +1021,7 @@ function styleSheet(ws,hasTotal){
   ws.autoFilter={from:{row:1,column:1},to:{row:(hasTotal?maxR-1:maxR),column:maxC}};
 }
 function cmpSheet(wb,title,pf){
-  var R=RESULT, T=R.T, L=R.list, D=R.dates;
+  var R=RESULT, T=R.T, L=R.view||R.list, D=R.dates;
   var ws=wb.addWorksheet(title);
   var head=['门店'];
   D.forEach(function(d,i){ head.push(d); if(i>0) head.push('较上期') });
@@ -829,7 +1047,7 @@ function cmpSheet(wb,title,pf){
 }
 $('#exportBtn').onclick=async function(){
   if(!RESULT) return;
-  var R=RESULT, T=R.T, L=R.list, D=R.dates;
+  var R=RESULT, T=R.T, L=R.view||R.list, D=R.dates;
   var wb=new ExcelJS.Workbook();
   wb.creator='好评差评统计';
 
