@@ -96,6 +96,11 @@
   .chip .n{color:var(--muted)}
   .chip .x{cursor:pointer;color:var(--muted);font-size:15px;line-height:1}
   .chip .x:hover{color:var(--bad)}
+  .chip .dl{cursor:pointer;color:var(--muted);font-size:14px;line-height:1;font-weight:700}
+  .chip .dl:hover{color:var(--orange)}
+  .dlall{align-self:center;background:none;border:none;padding:0;font-family:inherit;font-size:12.5px;
+    color:var(--gold);cursor:pointer;text-decoration:underline;text-underline-offset:3px;text-decoration-color:rgba(185,151,76,.35)}
+  .dlall:hover{color:var(--orange);text-decoration-color:currentColor}
 
   /* ── 设置 ── */
   .opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:18px;align-items:start}
@@ -481,14 +486,24 @@ function renderFiles(){
   ['meituan','douyin'].forEach(function(pf){
     var host=$('#files'+pf.charAt(0).toUpperCase()+pf.slice(1));
     host.innerHTML='';
-    Object.keys(FILES).forEach(function(n){
-      var f=FILES[n]; if(f.platform!==pf) return;
+    var mine=Object.keys(FILES).filter(function(n){ return FILES[n].platform===pf });
+    mine.forEach(function(n){
+      var f=FILES[n];
       var div=document.createElement('div'); div.className='chip';
-      div.innerHTML='<b></b><span class="n">'+f.rows.length+' 条</span><span class="x" title="移除">×</span>';
+      div.innerHTML='<b></b><span class="n">'+f.rows.length+' 条</span>'+
+        '<span class="dl" title="下载这份数据（Excel）">⤓</span><span class="x" title="移除">×</span>';
       div.querySelector('b').textContent=n;
+      div.querySelector('.dl').onclick=function(){ downloadRows(pf,[n], baseName(n)+'_明细.xlsx') };
       div.querySelector('.x').onclick=function(){delete FILES[n];saveFiles();renderFiles();refreshDateOptions()};
       host.appendChild(div);
     });
+    if(mine.length>1){
+      var all=document.createElement('button');
+      all.type='button'; all.className='dlall';
+      all.textContent='下载全部'+PLATFORMS[pf].label+'数据';
+      all.onclick=function(){ downloadRows(pf,mine,PLATFORMS[pf].label+'评价明细.xlsx') };
+      host.appendChild(all);
+    }
   });
   var names=Object.keys(FILES), total=0, saved=null;
   names.forEach(function(n){ total+=FILES[n].rows.length; if(FILES[n].savedAt) saved=Math.max(saved||0,FILES[n].savedAt) });
@@ -503,6 +518,36 @@ function renderFiles(){
   }
   $('#runBtn').disabled = names.length===0;
 }
+/* ═══════════ 下载已上传的评价明细 ═══════════ */
+function saveBlob(blob,name){
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1000);
+}
+function baseName(n){ return String(n).replace(/\.(xlsx|xls)$/i,'') }
+function starLabel(star,th){
+  if(star==null) return '中评';
+  return star>=th ? '好评' : (star<=2 ? '差评' : '中评');
+}
+/* 浏览器里只留了 日期/门店/星级/去重签名，评价正文没存，所以下载的是这四列的明细 */
+async function downloadRows(pf,names,outName){
+  var cfg=PLATFORMS[pf], th=parseFloat($('#threshold').value)||4, rows=[];
+  names.forEach(function(n){ var f=FILES[n]; if(f&&f.platform===pf) rows=rows.concat(f.rows) });
+  if(!rows.length){ toast('没有可下载的数据','error'); return }
+  rows.sort(function(a,b){ return a.day<b.day?-1:(a.day>b.day?1:a.key.localeCompare(b.key,'zh')) });
+  try{
+    var wb=new ExcelJS.Workbook(); wb.creator='好评统计';
+    var ws=wb.addWorksheet(cfg.label+'评价明细');
+    ws.addRow([cfg.date,cfg.store,'门店简称',cfg.star,'评价类型']);
+    rows.forEach(function(r){ ws.addRow([r.day,r.store,r.key,(r.star==null?'':r.star),starLabel(r.star,th)]) });
+    styleSheet(ws,false);
+    var buf=await wb.xlsx.writeBuffer();
+    saveBlob(new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),outName);
+    toast('已下载 '+num(rows.length)+' 条'+cfg.label+'评价','success');
+  }catch(e){ toast('下载失败：'+e.message,'error') }
+}
+
 async function addFiles(list,lane){
   $('#err').textContent='';
   var files=Array.prototype.slice.call(list||[]);   /* 一次可以选多份 */
@@ -1130,12 +1175,8 @@ $('#exportBtn').onclick=async function(){
 
   var buf=await wb.xlsx.writeBuffer();
   var blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-  var a=document.createElement('a');
   var mgrNow=mgrById($('#mgrFilter').value);
-  a.href=URL.createObjectURL(blob);
-  a.download='好评统计'+(mgrNow?('_'+mgrNow.name):'')+'.xlsx';
-  document.body.appendChild(a); a.click();
-  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1000);
+  saveBlob(blob,'好评统计'+(mgrNow?('_'+mgrNow.name):'')+'.xlsx');
   toast('已导出 Excel','success');
 };
 </script>
