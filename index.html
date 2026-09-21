@@ -238,15 +238,6 @@
     cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .2s}
   .tab:hover{color:var(--ink)}
   .tab.on{color:var(--ink);border-bottom-color:var(--ink)}
-  .tbar{display:flex;align-items:center;gap:14px;padding:16px 0 0;font-size:12px;
-    letter-spacing:.2em;color:var(--ink-soft)}
-  .tbar .sel{min-width:170px}
-  /* 这个下拉之前没跟着改小：按钮压到 30px 高，箭头还按 42px 的位置算，
-     结果箭头戳到框外面去了 */
-  .tbar .sel-btn{min-height:38px;padding:9px 34px 9px 14px;font-size:14px;
-    letter-spacing:0;text-transform:none}
-  .tbar .sel::after{top:15px}
-  .tbar .sel.open::after{top:18px}
   .tablewrap{max-height:none;overflow:visible;border-radius:0;margin-top:30px}
   table{width:100%;border-collapse:collapse;white-space:nowrap;background:none}
   thead th{background:none;color:var(--ink-soft);font-weight:500;font-size:13px;
@@ -491,16 +482,7 @@
       </div>
       <div class="tabs">
         <div class="tab on" data-tab="sum">门店好评差评</div>
-        <div class="tab" data-tab="cmp">日期对比</div>
         <div class="tab" data-tab="map">门店名称对照</div>
-      </div>
-      <div class="tbar hidden" id="tbar">
-        <span>平台</span>
-        <select id="pfFilter">
-          <option value="all" selected>两平台合计</option>
-          <option value="mt">仅美团</option>
-          <option value="dy">仅抖音</option>
-        </select>
       </div>
     </div>
     <div class="kpis" id="kpis"></div>
@@ -1101,8 +1083,7 @@ function compute(){
   rows.forEach(function(r){
     var key=keyOf(r);
     if(!S[key]){
-      var o={key:key,mt:[0,0,0],dy:[0,0,0],cum:{},mtTotal:0,dyTotal:0};
-      dates.forEach(function(d){ o.cum[d]={mt:0,dy:0} });
+      var o={key:key,mt:[0,0,0],dy:[0,0,0],mtTotal:0,dyTotal:0};
       S[key]=o;
     }
     if(!alias[key]) alias[key]={};
@@ -1116,8 +1097,6 @@ function compute(){
     if(inRange(r.day)){ s[p][b]++; nInRange++ }
     /* 累计总数：不看日期区间，问的是"到今天为止这家店一共多少好评" */
     if(b===0) s[p+'Total']++;
-    /* 累计口径不受区间限制 —— 它问的是"到这一天为止一共多少"，不是"这几天新增多少" */
-    if(b===0){ dates.forEach(function(d){ if(r.day<=d) s.cum[d][p]++ }) }
   });
   var list=Object.keys(S).map(function(k){
     var s=S[k];
@@ -1157,12 +1136,31 @@ function findGaps(rows,cover){
   });
   return out.sort(function(a,b){ return b.days-a.days });
 }
-/* 取某店某日期在指定平台口径下的累计好评 */
-function cumOf(s,d,pf){
-  var c=s.cum[d]||{mt:0,dy:0};
-  return pf==='mt'?c.mt:(pf==='dy'?c.dy:c.mt+c.dy);
+/* 数据空档：某个平台在自己的覆盖区间里，连续 GAP_DAYS 天一条评价都没有。
+   正常经营不可能整周零评价，基本就是那一段的导出表漏传了 —— 所以要提醒。 */
+var GAP_DAYS=7;
+function findGaps(rows,cover){
+  var out=[];
+  Object.keys(PLATFORMS).forEach(function(pf){
+    var c=cover[pf]; if(!c) return;
+    var have={};
+    rows.forEach(function(r){ if(r.pf===pf) have[r.day]=1 });
+    var d=new Date(c.min+'T00:00:00'), end=new Date(c.max+'T00:00:00');
+    var run=0, from='', last='';
+    var flush=function(){
+      if(run>=GAP_DAYS) out.push({pf:pf, from:from, to:last, days:run});
+      run=0;
+    };
+    while(d<=end){
+      var key=d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+      if(have[key]) flush();
+      else { if(!run) from=key; last=key; run++ }
+      d.setDate(d.getDate()+1);
+    }
+    flush();
+  });
+  return out.sort(function(a,b){ return b.days-a.days });
 }
-
 /* ═══════════ 渲染 ═══════════ */
 var TAB='sum';
 function render(){
@@ -1170,12 +1168,10 @@ function render(){
   var scope=scopeSet();
   var L = scope ? R.list.filter(function(s){ return scope[s.key] }) : R.list;
   R.view=L;   /* 导出用同一份范围 */
-  var T={good:0,bad:0,mtAll:0,dyAll:0,all:0,mt0:0,mt1:0,mt2:0,dy0:0,dy1:0,dy2:0,cum:{}};
-  D.forEach(function(d){ T.cum[d]={mt:0,dy:0} });
+  var T={good:0,bad:0,mtAll:0,dyAll:0,all:0,mt0:0,mt1:0,mt2:0,dy0:0,dy1:0,dy2:0};
   L.forEach(function(s){
     T.good+=s.good;T.bad+=s.bad;T.mtAll+=s.mtAll;T.dyAll+=s.dyAll;T.all+=s.all;
     T.mt0+=s.mt[0];T.mt1+=s.mt[1];T.mt2+=s.mt[2];T.dy0+=s.dy[0];T.dy1+=s.dy[1];T.dy2+=s.dy[2];
-    D.forEach(function(d){ T.cum[d].mt+=s.cum[d].mt; T.cum[d].dy+=s.cum[d].dy });
   });
   R.T=T;
 
@@ -1207,10 +1203,8 @@ function render(){
   cards.push(kpi('差评总数',num(T.bad),'美团 '+num(T.mt2)+' · 抖音 '+num(T.dy2)));
   $('#kpis').innerHTML=cards.join('');
 
-  $('#tbar').classList.toggle('hidden',TAB!=='cmp');
   $('#resultCard').classList.toggle('shot',TAB==='sum');   /* 只有主表走图片预览 */
   if(TAB==='sum') renderSum(L,T);
-  else if(TAB==='cmp') renderCmp(L,T,D);
   else renderMap(L);
 
   var cv=[];
@@ -1289,33 +1283,6 @@ function renderSum(L,T){
     ['美团新增','美团好评总数','抖音新增','抖音好评总数','差评'], hasMgr?['区域经理']:[]);
   $('#tableHost').innerHTML=table(head,body,'');
 }
-function renderCmp(L,T,D){
-  if(!D.length){ $('#tableHost').innerHTML='<div class="msel-empty">还没有选日期</div>'; return }
-  var pf=$('#pfFilter').value;
-  var head=['门店'];
-  D.forEach(function(d,i){ head.push(d); if(i>0) head.push('较上期') });
-  head.push('区间新增');
-  var totalOf=function(d){ var c=T.cum[d]; return pf==='mt'?c.mt:(pf==='dy'?c.dy:c.mt+c.dy) };
-  var span=function(s){ return cumOf(s,D[D.length-1],pf)-cumOf(s,D[0],pf) };
-  var body=L.slice().sort(function(a,b){
-    return (span(b)-span(a)) || (cumOf(b,D[D.length-1],pf)-cumOf(a,D[D.length-1],pf));
-  }).map(function(s){
-    var tds='<td>'+s.key+'</td>';
-    D.forEach(function(d,i){
-      tds+=cell(cumOf(s,d,pf));
-      if(i>0) tds+=delta(cumOf(s,d,pf)-cumOf(s,D[i-1],pf));
-    });
-    tds+=delta(span(s));
-    return '<tr>'+tds+'</tr>';
-  }).join('');
-  var tr='<tr class="total"><td>合计</td>';
-  D.forEach(function(d,i){
-    tr+='<td>'+num(totalOf(d))+'</td>';
-    if(i>0) tr+='<td>+'+num(totalOf(d)-totalOf(D[i-1]))+'</td>';
-  });
-  tr+='<td>+'+num(totalOf(D[D.length-1])-totalOf(D[0]))+'</td></tr>';
-  $('#tableHost').innerHTML=table(head,body,tr);
-}
 function renderMap(L){
   var body=L.slice().sort(function(a,b){return a.key.localeCompare(b.key,'zh')}).map(function(s){
     return '<tr><td>'+s.key+'</td><td style="text-align:left">'+esc(s.names)+'</td></tr>';
@@ -1329,7 +1296,6 @@ document.querySelectorAll('.tab').forEach(function(t){
     if(RESULT) render();
   };
 });
-$('#pfFilter').onchange=function(){ if(RESULT) render() };
 $('#runBtn').onclick=function(){
   if(!Object.keys(FILES).length) return;
   if(!DATES.length){ toast('至少选一个日期','error'); return }
@@ -1372,32 +1338,6 @@ function styleSheet(ws,hasTotal){
   ws.views=[{state:'frozen',xSplit:1,ySplit:1}];
   ws.autoFilter={from:{row:1,column:1},to:{row:(hasTotal?maxR-1:maxR),column:maxC}};
 }
-function cmpSheet(wb,title,pf){
-  var R=RESULT, T=R.T, L=R.view||R.list, D=R.dates;
-  var ws=wb.addWorksheet(title);
-  var hasMgr=MANAGERS.length>0;
-  var head=['门店'].concat(hasMgr?['区域经理']:[]);
-  D.forEach(function(d,i){ head.push(d); if(i>0) head.push('较上期') });
-  head.push('区间新增');
-  ws.addRow(head);
-  var span=function(s){ return cumOf(s,D[D.length-1],pf)-cumOf(s,D[0],pf) };
-  L.slice().sort(function(a,b){ return (span(b)-span(a))||(cumOf(b,D[D.length-1],pf)-cumOf(a,D[D.length-1],pf)) })
-   .forEach(function(s){
-    var row=[s.key].concat(hasMgr?[mgrOf(s.key)]:[]);
-    D.forEach(function(d,i){
-      row.push(cumOf(s,d,pf));
-      if(i>0) row.push(cumOf(s,d,pf)-cumOf(s,D[i-1],pf));
-    });
-    row.push(span(s));
-    ws.addRow(row);
-  });
-  var totalOf=function(d){ var c=T.cum[d]; return pf==='mt'?c.mt:(pf==='dy'?c.dy:c.mt+c.dy) };
-  var tr=['合计'].concat(hasMgr?['']:[]);
-  D.forEach(function(d,i){ tr.push(totalOf(d)); if(i>0) tr.push(totalOf(d)-totalOf(D[i-1])) });
-  tr.push(totalOf(D[D.length-1])-totalOf(D[0]));
-  ws.addRow(tr);
-  styleSheet(ws,true);
-}
 $('#exportBtn').onclick=async function(){
   if(!RESULT) return;
   var R=RESULT, T=R.T, L=R.view||R.list, D=R.dates;
@@ -1421,49 +1361,23 @@ $('#exportBtn').onclick=async function(){
   });
   styleSheet(s1,true);
 
-  if(D.length){
-    cmpSheet(wb,'日期对比-合计','all');
-    cmpSheet(wb,'日期对比-美团','mt');
-    cmpSheet(wb,'日期对比-抖音','dy');
-
-    var s3=wb.addWorksheet('总体对比');
-    s3.addRow(['口径'].concat(D));
-    s3.addRow(['美团好评'].concat(D.map(function(d){return T.cum[d].mt})));
-    s3.addRow(['抖音好评'].concat(D.map(function(d){return T.cum[d].dy})));
-    s3.addRow(['合计'].concat(D.map(function(d){return T.cum[d].mt+T.cum[d].dy})));
-    styleSheet(s3,true);
-  }
-
   if(MANAGERS.length){
     var sm=wb.addWorksheet('区域经理汇总');
-    var mh=['区域经理','门店数','美团好评','抖音好评','好评合计','差评合计','好评率'];
-    D.forEach(function(d,i){ mh.push(d); if(i>0) mh.push('较上期') });
-    if(D.length>1) mh.push('区间新增');
-    sm.addRow(mh);
+    sm.addRow(['区域经理','门店数','美团新增','抖音新增','新增合计','差评']);
     /* 这一页按全部门店算，便于几位经理横向比较，不受上面的经理筛选影响 */
     var rows=[];
     MANAGERS.forEach(function(m){
       var mine=R.list.filter(function(s){ return m.stores.indexOf(s.key)>=0 });
       var g=0,b=0,mt=0,dy=0,all=0;
       mine.forEach(function(s){ g+=s.good;b+=s.bad;mt+=s.mt[0];dy+=s.dy[0];all+=s.all });
-      var row=[m.name,mine.length,mt,dy,g,b,(all?(g/all*100).toFixed(1):0)+'%'];
-      var cum=D.map(function(d){
-        var v=0; mine.forEach(function(s){ v+=cumOf(s,d,'all') }); return v;
-      });
-      D.forEach(function(d,i){ row.push(cum[i]); if(i>0) row.push(cum[i]-cum[i-1]) });
-      if(D.length>1) row.push(cum[cum.length-1]-cum[0]);
-      rows.push({row:row, good:g});
+      rows.push({row:[m.name,mine.length,mt,dy,g,b], good:g});
     });
     /* 没有归属任何经理的门店单列一行 */
     var rest=R.list.filter(function(s){ return !mgrOf(s.key) });
     if(rest.length){
       var g=0,b=0,mt=0,dy=0,all=0;
       rest.forEach(function(s){ g+=s.good;b+=s.bad;mt+=s.mt[0];dy+=s.dy[0];all+=s.all });
-      var row=['（未分配）',rest.length,mt,dy,g,b,(all?(g/all*100).toFixed(1):0)+'%'];
-      var cum=D.map(function(d){ var v=0; rest.forEach(function(s){ v+=cumOf(s,d,'all') }); return v });
-      D.forEach(function(d,i){ row.push(cum[i]); if(i>0) row.push(cum[i]-cum[i-1]) });
-      if(D.length>1) row.push(cum[cum.length-1]-cum[0]);
-      rows.push({row:row, good:-1});
+      rows.push({row:['（未分配）',rest.length,mt,dy,g,b], good:-1});
     }
     rows.sort(function(a,b){ return b.good-a.good });
     rows.forEach(function(x){ sm.addRow(x.row) });
