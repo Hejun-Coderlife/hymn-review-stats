@@ -1191,18 +1191,18 @@ function render(){
 
   var first=D[0], last=D[D.length-1];
   /* 页面上这排 = 导出图上那排，三个，顺序也一样：
-     日期区间 → 新增好评数量（中间，大、品牌粉）→ 差评总数。
-     没选出区间时中间退回好评总数，免得中间空着。 */
+     好评总数 → 新增好评数量（中间，大、品牌粉）→ 差评总数。 */
   var md=function(d){ return d?d.slice(5).replace('-','/'):'' };   /* 09-21 → 09/21 */
   var cards=[];
-  /* 两段日期都写出来：大字 = 新增/差评的区间（默认最近一周），小字 = 好评总数的近 1 年 */
+  /* 每个数字底下直接写它自己的日期：好评总数 = 传进来的全部（累计起止），新增 = 所选区间 */
   var sl=function(d){ return d?d.slice(2).replace(/-/g,'/'):'' };   /* 2025-09-28 → 25/09/28 */
   var nd=D.length>1?dayGap(first,last)+1:1;
-  cards.push(kpi('新增 · '+nd+'天',
-    D.length>1?(md(first)+'-'+md(last)):md(first),
-    R.all.from?('好评总数 · 累计\n'+sl(R.all.from)+'-'+sl(R.all.to)):'', false,true));
-  cards.push(kpi('新增好评数量','+'+num(T.good),
-    D.length>1?('共 '+(dayGap(first,last)+1)+' 天'):'当天', false,false,true));
+  var allGood=0; L.forEach(function(s){ allGood+=s.mtTotal+s.dyTotal });
+  var SL=spanLabels();
+  cards.push(kpi('好评总数（'+SL.all+'）',num(allGood),
+    R.all.from?(sl(R.all.from)+'-'+sl(R.all.to)):'累计'));
+  cards.push(kpi('新增好评数量（'+SL.add+'）','+'+num(T.good),
+    (D.length>1?(md(first)+'-'+md(last)):md(first))+' · 共'+nd+'天', false,false,true));
   cards.push(kpi('差评总数',num(T.bad),'美团 '+num(T.mt2)+' · 抖音 '+num(T.dy2)));
   $('#kpis').innerHTML=cards.join('');
 
@@ -1235,6 +1235,15 @@ function renderWarn(R){
   var el=$('#warn');
   el.innerHTML=w.map(function(t){ return '<div>'+t+'</div>' }).join('');
   el.classList.toggle('hidden',!w.length);
+}
+/* 两段口径的文字标注（表头、卡片、Excel 共用）：
+   新增 = 所选区间天数，7 天写"1周"；好评总数 = 传进来数据的跨度，满 11 个月按年算，否则按月 */
+function spanLabels(){
+  var D=DATES.slice().sort(), f=D[0], t=D[D.length-1];
+  var nd=f?dayGap(f,t)+1:0;
+  var ad=DATA_MIN?dayGap(DATA_MIN,DATA_MAX)+1:0;
+  return { add: nd===7?'1周':(nd+'天'),
+           all: !ad?'累计':(ad>=330?Math.round(ad/365)+'年':Math.max(1,Math.round(ad/30.4))+'个月') };
 }
 function kpi(k,v,s,up,sm,hero){
   return '<div class="kpi'+(hero?' hero':'')+'"><div class="k">'+k+'</div><div class="v'+
@@ -1283,7 +1292,8 @@ function renderSum(L,T){
   /* 按平台分组：每个平台「区间内新增」紧挨着「累计总数」，一眼对得上。
      差评合成一列写清楚是哪边的，区域经理放最后 */
   var head=['门店'].concat(
-    ['美团新增','美团好评总数','抖音新增','抖音好评总数','差评'], hasMgr?['区域经理']:[]);
+    (function(SL){ return ['美团新增('+SL.add+')','美团好评总数('+SL.all+')',
+      '抖音新增('+SL.add+')','抖音好评总数('+SL.all+')','差评'] })(spanLabels()), hasMgr?['区域经理']:[]);
   $('#tableHost').innerHTML=table(head,body,'');
 }
 function renderMap(L){
@@ -1351,7 +1361,8 @@ $('#exportBtn').onclick=async function(){
   /* 这一页和网页上那张表 / 导出的图完全一致：同样的列、同样的排序、同样的口径。
      差评那格也照图上的写法（只写有数的那边），不另外拆成两列。 */
   var s1=wb.addWorksheet('门店好评差评统计');
-  s1.addRow(['序号','门店','美团新增','美团好评总数','抖音新增','抖音好评总数','差评']
+  var SL=spanLabels();
+  s1.addRow(['序号','门店','美团新增('+SL.add+')','美团好评总数('+SL.all+')','抖音新增('+SL.add+')','抖音好评总数('+SL.all+')','差评']
     .concat(hasMgr?['区域经理']:[]));
   L.slice().sort(function(a,b){
     return (rankScore(b)-rankScore(a)) || (b.good-a.good);
@@ -1400,9 +1411,9 @@ $('#exportBtn').onclick=async function(){
 };
 </script>
 
-<script src="assets/select.js?v=20260928"></script>
-<script src="assets/logo-data.js?v=20260928"></script>
-<script src="assets/image-export.js?v=20260928"></script>
+<script src="assets/select.js?v=20260928b"></script>
+<script src="assets/logo-data.js?v=20260928b"></script>
+<script src="assets/image-export.js?v=20260928b"></script>
 <script>
 $('#imgBtn').onclick=function(){ exportImage() };
 

@@ -71,16 +71,14 @@ function grab(){
     var q=function(s){ var e=k.querySelector(s); return e?e.textContent.trim():'' };
     return { k:q('.k'), v:q('.v'), s:q('.s') };
   });
-  /* 一排三个：日期区间 · 新增好评数量 · 差评总数。
-     中间那个是这张图的主角 —— 字号翻倍、用品牌粉，靠位置和体量压场。
-     只选了一个日期、没有区间时，中间退回好评总数，免得中间空着。 */
-  var pick=function(n){ for(var k=0;k<kpis.length;k++) if(kpis[k].k===n) return kpis[k]; return null };
+  /* 一排三个：好评总数 · 新增好评数量 · 差评总数，每个数字底下写它自己的日期。
+     中间那个是这张图的主角 —— 字号翻倍、用品牌粉，靠位置和体量压场。 */
+  /* 卡片标题后面带着（1年）/（1周），按开头匹配 */
+  var pick=function(n){ for(var k=0;k<kpis.length;k++) if(kpis[k].k.indexOf(n)===0) return kpis[k]; return null };
   var strip=[];
   var push=function(n,o){ var k=pick(n); if(k) strip.push(Object.assign({k:k.k,v:k.v,s:k.s},o||{})) };
-  var dk=kpis.filter(function(k){ return /^新增 · /.test(k.k) })[0];   /* 日期卡：标题随区间天数变 */
-  if(dk) strip.push(Object.assign({},dk,{size:30}));
+  push('好评总数');
   push('新增好评数量',{size:72,pink:true});
-  if(!pick('新增好评数量')) push('好评总数',{size:72,pink:true});
   push('差评总数');
 
   var tab=document.querySelector('.tab.on');
