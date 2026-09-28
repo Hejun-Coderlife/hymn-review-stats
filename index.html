@@ -1095,7 +1095,7 @@ function compute(){
        槽位 1 留给「星级读不出来」的行，两边都不算，免得凭空多出差评。 */
     var b = (r.star==null) ? 1 : (r.star>=th ? 0 : 2);   // 0好 1星级不明(不计入) 2差
     if(inRange(r.day)){ s[p][b]++; nInRange++ }
-    /* 累计总数：不看日期区间，问的是"到今天为止这家店一共多少好评" */
+    /* 好评总数：不看日期区间，传进来的全部都算（覆盖哪几天，日期卡片上写着） */
     if(b===0) s[p+'Total']++;
   });
   var list=Object.keys(S).map(function(k){
@@ -1109,7 +1109,7 @@ function compute(){
     return s;
   });
   return {list:list, cover:cover, dupCount:dupCount, dates:dates, th:th,
-          total:nInRange, gaps:findGaps(rows,cover)};
+          total:nInRange, gaps:findGaps(rows,cover), all:{from:DATA_MIN,to:DATA_MAX}};
 }
 /* 数据空档：某个平台在自己的覆盖区间里，连续 GAP_DAYS 天一条评价都没有。
    正常经营不可能整周零评价，基本就是那一段的导出表漏传了 —— 所以要提醒。 */
@@ -1195,9 +1195,12 @@ function render(){
      没选出区间时中间退回好评总数，免得中间空着。 */
   var md=function(d){ return d?d.slice(5).replace('-','/'):'' };   /* 09-21 → 09/21 */
   var cards=[];
-  cards.push(kpi('日期区间',
+  /* 两段日期都写出来：大字 = 新增/差评的区间（默认最近一周），小字 = 好评总数的近 1 年 */
+  var sl=function(d){ return d?d.slice(2).replace(/-/g,'/'):'' };   /* 2025-09-28 → 25/09/28 */
+  var nd=D.length>1?dayGap(first,last)+1:1;
+  cards.push(kpi('新增 · '+nd+'天',
     D.length>1?(md(first)+'-'+md(last)):md(first),
-    D.length>1?(first+' ~ '+last):(first||''), false,true));
+    R.all.from?('好评总数 · 累计\n'+sl(R.all.from)+'-'+sl(R.all.to)):'', false,true));
   cards.push(kpi('新增好评数量','+'+num(T.good),
     D.length>1?('共 '+(dayGap(first,last)+1)+' 天'):'当天', false,false,true));
   cards.push(kpi('差评总数',num(T.bad),'美团 '+num(T.mt2)+' · 抖音 '+num(T.dy2)));

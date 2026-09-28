@@ -77,7 +77,8 @@ function grab(){
   var pick=function(n){ for(var k=0;k<kpis.length;k++) if(kpis[k].k===n) return kpis[k]; return null };
   var strip=[];
   var push=function(n,o){ var k=pick(n); if(k) strip.push(Object.assign({k:k.k,v:k.v,s:k.s},o||{})) };
-  push('日期区间',{size:30});
+  var dk=kpis.filter(function(k){ return /^新增 · /.test(k.k) })[0];   /* 日期卡：标题随区间天数变 */
+  if(dk) strip.push(Object.assign({},dk,{size:30}));
   push('新增好评数量',{size:72,pink:true});
   if(!pick('新增好评数量')) push('好评总数',{size:72,pink:true});
   push('差评总数');
@@ -211,9 +212,14 @@ function compose(ctx,d,W,logo,dry){
       tx0(ctx,dry,k.k,cx,base,fit(k.k,{size:13,color:C.dim,ls:'.22em'}));
       tx0(ctx,dry,k.v,cx,base+74,fit(k.v,{size:k.size||46,fam:F.serif,
         color:k.pink||/差评/.test(k.k)?C.pinkDeep:C.ink}));
-      tx0(ctx,dry,k.s,cx,base+100,fit(k.s,{size:15,color:C.ink2,ls:'.02em'}));
+      /* 副标可以换行（日期区间那格：第二行写好评总数的近 1 年起止） */
+      String(k.s).split('\n').forEach(function(s,j){
+        tx0(ctx,dry,s,cx,base+100+j*20,fit(s,{size:15,color:C.ink2,ls:'.02em'}));
+      });
     });
-    y+=(Math.ceil(rest.length/per)-1)*cellH+100+40;
+    var extra=0;
+    rest.forEach(function(k){ extra=Math.max(extra,(String(k.s).split('\n').length-1)*20) });
+    y+=(Math.ceil(rest.length/per)-1)*cellH+100+40+extra;
     if(on()) hr(ctx,L,R,y,C.hair);
   }
 
