@@ -816,14 +816,16 @@ var DEFAULT_MGRS=[
   {name:'晨科', stores:['低塘店','横峰店','金清店','马渚店','梅林店','潘郎店','蓬街店',
                         '钱清店','石浦店','泗门赫眉','泗门珀莱雅','新河店','义桥店','丈亭店']},
   {name:'沫沫', stores:['崇寿店','范市店','周巷嘉悦广场店','龙山店','三横店','塘下店',
-                        '天元店','西坞店','溪口店','周巷珀莱雅']},
+                        '天元店','西坞店','溪口店','周巷珀莱雅',
+                        '古林店','海曙龙湖天街店','海曙恒一广场店','横街店','横溪店','姜山店',
+                        '联丰店','邱隘倾城店','邱隘思美店','鄞州万达店']},
   {name:'霞姐', stores:['柴桥店','慈城店','高塘店','红联店','洪塘店','华悦美妆',
-                        '江北万达店','美时百货','庄市店']},
-  {name:'张敏', stores:['古林店','海曙龙湖天街店','海曙恒一广场店','横街店','横溪店','姜山店',
-                        '联丰店','邱隘倾城店','邱隘思美店','鄞州万达店']}
+                        '江北万达店','美时百货','庄市店']}
 ];
 /* 经理改名：本机已经存过旧名字的，加载时顺手改掉，不用手动重建分组 */
 var MGR_RENAME={'张维':'晨科'};
+/* 经理合并：原张敏的店整体并给沫沫，本机存过旧分组的加载时自动并过去 */
+var MGR_MERGE={'张敏':'沫沫'};
 function loadMgrs(){
   try{ MANAGERS=JSON.parse(localStorage.getItem(LS_MGRS)||'[]')||[] }catch(e){ MANAGERS=[] }
   var fixed=false;
@@ -831,6 +833,16 @@ function loadMgrs(){
     if(MGR_RENAME[m.name]){ m.name=MGR_RENAME[m.name]; fixed=true }
     /* 炼化店改名成华悦美妆之后才归到霞姐名下，本机存过旧分组的补上 */
     if(m.name==='霞姐' && m.stores.indexOf('华悦美妆')<0){ m.stores.push('华悦美妆'); fixed=true }
+  });
+  Object.keys(MGR_MERGE).forEach(function(from){
+    var src=null,dst=null;
+    MANAGERS.forEach(function(m){ if(m.name===from) src=m; if(m.name===MGR_MERGE[from]) dst=m });
+    if(!src) return;
+    if(dst){
+      src.stores.forEach(function(k){ if(dst.stores.indexOf(k)<0) dst.stores.push(k) });
+      MANAGERS.splice(MANAGERS.indexOf(src),1);
+    }else src.name=MGR_MERGE[from];
+    fixed=true;
   });
   if(fixed) saveMgrs();
   if(!MANAGERS.length){
