@@ -343,4 +343,19 @@ window.exportImage=async function(){
     toast('已下载图片','success');
   },'image/png');
 };
+
+/* 复制到剪贴板，直接粘进微信。ClipboardItem 里塞 Promise 而不是先 await 好的 blob：
+   Safari 要求 clipboard.write 必须在点击的同一拍里调用，await 完再写会被拒。 */
+window.copyImage=function(){
+  if(!navigator.clipboard||!window.ClipboardItem){ toast('这个浏览器不支持复制图片，请用下载图片','error'); return }
+  var png=Promise.resolve(LAST||build()).then(function(r){
+    if(!r) throw new Error('empty');
+    return new Promise(function(ok){ r.cv.toBlob(ok,'image/png') });
+  });
+  navigator.clipboard.write([new ClipboardItem({'image/png':png})]).then(function(){
+    toast('已复制图片，可直接粘贴','success');
+  },function(){
+    png.then(function(){ toast('复制失败，请用下载图片','error') },function(){ toast('先统计出结果再复制图片') });
+  });
+};
 })();

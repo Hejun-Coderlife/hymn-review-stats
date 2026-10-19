@@ -197,7 +197,7 @@
 
   /* ── 按钮 ──
      整页只有「开始统计」是主操作，所以只有它是实心色块；
-     其余（导出 Excel / 下载图片 / 管理…）一律是拉开字距的小字压一条线。
+     其余（导出 Excel / 复制图片 / 下载图片 / 管理…）一律是拉开字距的小字压一条线。
      这是全页唯一一块填充色，靠的就是"只此一处"来抓眼睛。 */
   .btn{
     min-height:auto;padding:22px 64px;border:0;border-radius:0;box-shadow:none;
@@ -477,6 +477,7 @@
         <h2>统计结果<span class="lead" id="resultLead"></span></h2>
         <div class="res-acts">
           <button class="btn ghost hidden" id="exportBtn">导出 Excel</button>
+          <button class="btn ghost hidden" id="copyImgBtn">复制图片</button>
           <button class="btn ghost hidden" id="imgBtn">下载图片</button>
         </div>
       </div>
@@ -800,7 +801,7 @@ function clearSaved(){
   renderFiles(); refreshDateOptions();
   $('#resultCard').classList.add('hidden');
   $('#exportBtn').classList.add('hidden');
-  $('#imgBtn').classList.add('hidden');
+  $('#imgBtn').classList.add('hidden'); $('#copyImgBtn').classList.add('hidden');
   $('#err').textContent='';
   toast('已清空已保存的表格');
 }
@@ -1197,7 +1198,7 @@ function render(){
   if(scope && !L.length){
     $('#kpis').innerHTML=''; $('#tableHost').innerHTML='<div class="msel-empty">这位经理名下的门店，在已上传的数据里一条评价都没有</div>';
     $('#coverage').innerHTML=''; $('#resultCard').classList.remove('hidden');
-    $('#exportBtn').classList.remove('hidden'); $('#imgBtn').classList.remove('hidden');
+    $('#exportBtn').classList.remove('hidden'); $('#imgBtn').classList.remove('hidden'); $('#copyImgBtn').classList.remove('hidden');
     if(window.renderPreview) renderPreview();
     return;
   }
@@ -1232,7 +1233,7 @@ function render(){
   $('#coverage').innerHTML=cv.join('<br>');
   $('#resultCard').classList.remove('hidden');
   $('#exportBtn').classList.remove('hidden');
-  $('#imgBtn').classList.remove('hidden');
+  $('#imgBtn').classList.remove('hidden'); $('#copyImgBtn').classList.remove('hidden');
   if(window.renderPreview) renderPreview();   /* 页面显示的就是导出图本身 */
 }
 /* 数据有明显缺口或重复就顶出来说，别让人拿着半份数据下结论 */
@@ -1427,9 +1428,10 @@ $('#exportBtn').onclick=async function(){
 
 <script src="assets/select.js?v=20260928b"></script>
 <script src="assets/logo-data.js?v=20260928b"></script>
-<script src="assets/image-export.js?v=20260928b"></script>
+<script src="assets/image-export.js?v=20261019"></script>
 <script>
 $('#imgBtn').onclick=function(){ exportImage() };
+$('#copyImgBtn').onclick=function(){ copyImage() };
 
 /* 预览点一下放大 */
 (function(){
