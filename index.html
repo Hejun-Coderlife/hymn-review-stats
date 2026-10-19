@@ -813,26 +813,27 @@ var EDIT_ID=null;       // 弹窗里正在编辑的经理
 /* 默认分组（首次打开时写入，之后以本机改过的为准）。
    门店写的是本工具的简称 —— 也就是 RENAME 之后的名字。 */
 var DEFAULT_MGRS=[
-  {name:'晨科', stores:['低塘店','横峰店','金清店','马渚店','梅林店','潘郎店','蓬街店',
+  {name:'张维', stores:['低塘店','横峰店','金清店','马渚店','梅林店','潘郎店','蓬街店',
                         '钱清店','石浦店','泗门赫眉','泗门珀莱雅','新河店','义桥店','丈亭店']},
-  {name:'沫沫', stores:['崇寿店','范市店','周巷嘉悦广场店','龙山店','三横店','塘下店',
+  {name:'官卜妮', stores:['崇寿店','范市店','周巷嘉悦广场店','龙山店','三横店','塘下店',
                         '天元店','西坞店','溪口店','周巷珀莱雅',
                         '古林店','海曙龙湖天街店','海曙恒一广场店','横街店','横溪店','姜山店',
                         '联丰店','邱隘倾城店','邱隘思美店','鄞州万达店']},
-  {name:'霞姐', stores:['柴桥店','慈城店','高塘店','红联店','洪塘店','华悦美妆',
+  {name:'杜海霞', stores:['柴桥店','慈城店','高塘店','红联店','洪塘店','华悦美妆',
                         '江北万达店','美时百货','庄市店']}
 ];
-/* 经理改名：本机已经存过旧名字的，加载时顺手改掉，不用手动重建分组 */
-var MGR_RENAME={'张维':'晨科'};
-/* 经理合并：原张敏的店整体并给沫沫，本机存过旧分组的加载时自动并过去 */
-var MGR_MERGE={'张敏':'沫沫'};
+/* 经理改名：本机已经存过旧名字的，加载时顺手改掉，不用手动重建分组
+   （2026-10-19 统一用真名：晨科→张维、沫沫→官卜妮、霞姐→杜海霞） */
+var MGR_RENAME={'晨科':'张维','沫沫':'官卜妮','霞姐':'杜海霞'};
+/* 经理合并：原张敏的店整体并给官卜妮（原沫沫），本机存过旧分组的加载时自动并过去 */
+var MGR_MERGE={'张敏':'官卜妮'};
 function loadMgrs(){
   try{ MANAGERS=JSON.parse(localStorage.getItem(LS_MGRS)||'[]')||[] }catch(e){ MANAGERS=[] }
   var fixed=false;
   MANAGERS.forEach(function(m){
     if(MGR_RENAME[m.name]){ m.name=MGR_RENAME[m.name]; fixed=true }
-    /* 炼化店改名成华悦美妆之后才归到霞姐名下，本机存过旧分组的补上 */
-    if(m.name==='霞姐' && m.stores.indexOf('华悦美妆')<0){ m.stores.push('华悦美妆'); fixed=true }
+    /* 炼化店改名成华悦美妆之后才归到杜海霞名下，本机存过旧分组的补上 */
+    if(m.name==='杜海霞' && m.stores.indexOf('华悦美妆')<0){ m.stores.push('华悦美妆'); fixed=true }
   });
   Object.keys(MGR_MERGE).forEach(function(from){
     var src=null,dst=null;
@@ -1203,7 +1204,7 @@ function render(){
 
   var first=D[0], last=D[D.length-1];
   /* 页面上这排 = 导出图上那排，三个，顺序也一样：
-     好评总数 → 新增好评数量（中间，大、品牌粉）→ 差评总数。 */
+     好评总数 → 新增好评数量（中间，大、品牌粉）→ 差评数量（跟新增同一区间）。 */
   var md=function(d){ return d?d.slice(5).replace('-','/'):'' };   /* 09-21 → 09/21 */
   var cards=[];
   /* 每个数字底下直接写它自己的日期：好评总数 = 传进来的全部（累计起止），新增 = 所选区间 */
@@ -1215,7 +1216,8 @@ function render(){
     R.all.from?(sl(R.all.from)+'-'+sl(R.all.to)):'累计'));
   cards.push(kpi('新增好评数量（'+SL.add+'）','+'+num(T.good),
     (D.length>1?(md(first)+'-'+md(last)):md(first))+' · 共'+nd+'天', false,false,true));
-  cards.push(kpi('差评总数',num(T.bad),'美团 '+num(T.mt2)+' · 抖音 '+num(T.dy2)));
+  cards.push(kpi('差评数量（'+SL.add+'）',num(T.bad),
+    (D.length>1?(md(first)+'-'+md(last)):md(first))+' · 美团 '+num(T.mt2)+' · 抖音 '+num(T.dy2)));
   $('#kpis').innerHTML=cards.join('');
 
   $('#resultCard').classList.toggle('shot',TAB==='sum');   /* 只有主表走图片预览 */
@@ -1305,7 +1307,7 @@ function renderSum(L,T){
      差评合成一列写清楚是哪边的，区域经理放最后 */
   var head=['门店'].concat(
     (function(SL){ return ['美团新增('+SL.add+')','美团好评总数('+SL.all+')',
-      '抖音新增('+SL.add+')','抖音好评总数('+SL.all+')','差评'] })(spanLabels()), hasMgr?['区域经理']:[]);
+      '抖音新增('+SL.add+')','抖音好评总数('+SL.all+')','差评('+SL.add+')'] })(spanLabels()), hasMgr?['区域经理']:[]);
   $('#tableHost').innerHTML=table(head,body,'');
 }
 function renderMap(L){
@@ -1374,7 +1376,7 @@ $('#exportBtn').onclick=async function(){
      差评那格也照图上的写法（只写有数的那边），不另外拆成两列。 */
   var s1=wb.addWorksheet('门店好评差评统计');
   var SL=spanLabels();
-  s1.addRow(['序号','门店','美团新增('+SL.add+')','美团好评总数('+SL.all+')','抖音新增('+SL.add+')','抖音好评总数('+SL.all+')','差评']
+  s1.addRow(['序号','门店','美团新增('+SL.add+')','美团好评总数('+SL.all+')','抖音新增('+SL.add+')','抖音好评总数('+SL.all+')','差评('+SL.add+')']
     .concat(hasMgr?['区域经理']:[]));
   L.slice().sort(function(a,b){
     return (rankScore(b)-rankScore(a)) || (b.good-a.good);
@@ -1389,7 +1391,7 @@ $('#exportBtn').onclick=async function(){
 
   if(MANAGERS.length){
     var sm=wb.addWorksheet('区域经理汇总');
-    sm.addRow(['区域经理','门店数','美团新增','抖音新增','新增合计','差评']);
+    sm.addRow(['区域经理','门店数','美团新增','抖音新增','新增合计','差评('+SL.add+')']);
     /* 这一页按全部门店算，便于几位经理横向比较，不受上面的经理筛选影响 */
     var rows=[];
     MANAGERS.forEach(function(m){

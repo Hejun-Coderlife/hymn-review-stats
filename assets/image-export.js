@@ -71,7 +71,7 @@ function grab(){
     var q=function(s){ var e=k.querySelector(s); return e?e.textContent.trim():'' };
     return { k:q('.k'), v:q('.v'), s:q('.s') };
   });
-  /* 一排三个：好评总数 · 新增好评数量 · 差评总数，每个数字底下写它自己的日期。
+  /* 一排三个：好评总数 · 新增好评数量 · 差评数量，每个数字底下写它自己的日期。
      中间那个是这张图的主角 —— 字号翻倍、用品牌粉，靠位置和体量压场。 */
   /* 卡片标题后面带着（1年）/（1周），按开头匹配 */
   var pick=function(n){ for(var k=0;k<kpis.length;k++) if(kpis[k].k.indexOf(n)===0) return kpis[k]; return null };
@@ -79,7 +79,7 @@ function grab(){
   var push=function(n,o){ var k=pick(n); if(k) strip.push(Object.assign({k:k.k,v:k.v,s:k.s},o||{})) };
   push('好评总数');
   push('新增好评数量',{size:72,pink:true});
-  push('差评总数');
+  push('差评数量');
 
   var tab=document.querySelector('.tab.on');
   var lead=document.querySelector('#resultLead');
